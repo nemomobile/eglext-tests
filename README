@@ -1,0 +1,39 @@
+EGL extension tests
+===================
+Copyright (C) 2010 Nokia
+Contact: Sami Kyöstilä <sami.kyostila@nokia.com>
+
+This project contains a number of EGL extension tests. These tests exercise
+various functional aspects of each extension to verify a correct driver
+implementation.
+
+Compiling
+---------
+
+In order to compile the tests, EGL and OpenGL ES 2.0 libraries must be
+installed in the system. Additionally, the following dependencies must be
+installed:
+
+    libx11-dev, libxext-dev, x11proto-composite-dev, libboost1.42-dev
+
+Compile all available tests by typing:
+
+    $ make
+
+Running the tests
+-----------------
+
+When executed, each test produces output such as the following:
+
+    Testing extension presence                     : OK
+    Testing failure cases                          : OK
+    Testing basic functionality                    : OK
+    ...
+    ================================================
+    Result: OK
+
+If any of the tests fail, the final line will contain "Result: FAIL" and the
+executable will exit with a non-zero status.
+
+Please refer to the doxygen comments in the test source code (test_*.cpp) for
+detailed test descriptions.

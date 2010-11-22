@@ -1,0 +1,16 @@
+Source: eglext-tests
+Section: graphics
+Priority: extra
+Maintainer: Sami Kyöstilä <sami.kyostila@nokia.com>
+Build-Depends: debhelper (>= 7.0.50~), libx11-dev, libxext-dev, libgles2-sgx-img-dev, opengles-sgx-img-common-dev, x11proto-composite-dev, libboost1.42-dev
+Standards-Version: 3.8.4
+Homepage: http://gitorious.org/meego-graphics/eglext-tests
+Vcs-Git: git://gitorious.org/meego-graphics/eglext-tests.git
+Vcs-Browser: http://gitorious.org/meego-graphics/eglext-tests/trees
+
+Package: eglext-tests
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: EGL extension tests
+ This package contains a number of automated tests for verifying
+ the functionality of EGL extensions.
