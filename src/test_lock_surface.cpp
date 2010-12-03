@@ -162,9 +162,9 @@ void checkSurface(EGLDisplay dpy, EGLSurface surface)
     ASSERT_EGL();
     ASSERT_GL();
 
-    for (int y = 0; y < height; y += height / 2)
+    for (int y = 0; y < height; y += height / 2 + 1)
     {
-        for (int x = 0; x < width; x += width / 4)
+        for (int x = 0; x < width; x += width / 4 + 1)
         {
             int px = x + width / 8;
             int py = y + height / 4;
@@ -228,9 +228,9 @@ void checkFramebuffer(int width, int height)
     test::scoped<int> fb(
             fbFd, boost::bind(test::unmapFramebuffer, fbPixels, _1, fbSize));
 
-    for (int y = 0; y < height; y += height / 2)
+    for (int y = 0; y < height; y += height / 2 + 1)
     {
-        for (int x = 0; x < width; x += width / 4)
+        for (int x = 0; x < width; x += width / 4 + 1)
         {
             int px = x + width / 8;
             int py = y + height / 4;
