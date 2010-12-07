@@ -127,6 +127,12 @@ EGLBoolean nativeCreateWindow(EGLNativeDisplayType nativeDisplay, EGLDisplay dpy
     XWindowAttributes rootAttrs;
     XVisualInfo visualInfo;
     int visualCount = 0;
+    int fremantle = runningOnFremantle();
+
+    /* Avoid window manager animations that can interfere with tests */
+    Atom windowType = XInternAtom(nativeDisplay, "_NET_WM_WINDOW_TYPE", False);
+    Atom windowTypeOverride = XInternAtom(nativeDisplay, "_KDE_NET_WM_WINDOW_TYPE_OVERRIDE", False);
+    Atom windowTypeDialog = XInternAtom(nativeDisplay, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 
     if (eglGetConfigAttrib(dpy, config, EGL_NATIVE_VISUAL_ID, &visualId) != EGL_TRUE)
     {
@@ -162,16 +168,19 @@ EGLBoolean nativeCreateWindow(EGLNativeDisplayType nativeDisplay, EGLDisplay dpy
         return EGL_FALSE;
     }
 
-    /* Enable non-composited mode if possible */
-    if (XVisualIDFromVisual(rootAttrs.visual) == visualId)
-    {
-        Atom windowType = XInternAtom(nativeDisplay, "_NET_WM_WINDOW_TYPE", False);
-        Atom windowTypeOverride = XInternAtom(nativeDisplay, "_KDE_NET_WM_WINDOW_TYPE_OVERRIDE", False);
+    /*
+     * Harmattan needs the dialog and override always. Logic is only fallback
+     * for fremantle to avoid changing properties there.
+     */
+    if (!fremantle || XVisualIDFromVisual(rootAttrs.visual) == visualId) {
+        int mode = PropModeReplace;
 
-        if (!runningOnFremantle())
-        {
-            XChangeProperty(nativeDisplay, window, windowType, XA_ATOM, 32, PropModeReplace, (unsigned char*)&windowTypeOverride, 1);
+        if (!fremantle) {
+            XChangeProperty(nativeDisplay, window, windowType, XA_ATOM, 32, mode, (unsigned char*)&windowTypeDialog, 1);
+            mode = PropModeAppend;
         }
+
+        XChangeProperty(nativeDisplay, window, windowType, XA_ATOM, 32, mode, (unsigned char*)&windowTypeOverride, 1);
     }
 
     windowTitle.value    = (unsigned char*)title;
@@ -180,8 +189,15 @@ EGLBoolean nativeCreateWindow(EGLNativeDisplayType nativeDisplay, EGLDisplay dpy
     windowTitle.nitems   = strlen(title);
     XSetWMName(nativeDisplay, window, &windowTitle);
 
-    XMapWindow(nativeDisplay, window);
-    XFlush(nativeDisplay);
+    /*
+     * Harmattan WM reads all Atoms in MapRequest so it is best to set
+     * atoms before mapping. But in Fremantle that doesn't work (according
+     * to Tero's comments)
+     */
+    if (fremantle) {
+        XMapWindow(nativeDisplay, window);
+        XFlush(nativeDisplay);
+    }
 
     /* Set window to fullscreen mode if it matches the screen size */
     if (rootAttrs.width == width && rootAttrs.height == height)
@@ -199,6 +215,11 @@ EGLBoolean nativeCreateWindow(EGLNativeDisplayType nativeDisplay, EGLDisplay dpy
         xev.xclient.data.l[1] = wmStateFullscreen;
         xev.xclient.data.l[2] = 0;
         XSendEvent(nativeDisplay, rootWindow, False, SubstructureNotifyMask, &xev);
+    }
+
+    if (!fremantle) {
+        XMapWindow(nativeDisplay, window);
+        XFlush(nativeDisplay);
     }
 
     waitUntilWindowIsFocused(nativeDisplay, window);
