@@ -208,6 +208,7 @@ bool printResult(const std::runtime_error& error)
 {
     printResult(false);
     printf("%s\n", error.what());
+    return false;
 }
 
 void printHeader(const char* header, ...)
