@@ -1,3 +1,9 @@
+eglext-tests (0.3) unstable; urgency=low
+
+  * egl-ext: Fix X11 window atom handling
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Tue, 07 Dec 2010 18:22:24 +0200
+
 eglext-tests (0.2) unstable; urgency=low
 
   * Fix test failure caused by integer rounding
