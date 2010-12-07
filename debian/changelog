@@ -1,3 +1,9 @@
+eglext-tests (0.2) unstable; urgency=low
+
+  * Fix test failure caused by integer rounding
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Tue, 07 Dec 2010 16:17:08 +0200
+
 eglext-tests (0.1-1) unstable; urgency=low
 
   * Initial release
