@@ -63,10 +63,6 @@ bool checkColor(int x, int y, const uint8_t* expected);
 bool compareRGB565(uint16_t p1, uint16_t p2);
 bool compareRGBA8888(uint32_t p1, uint32_t p2);
 
-bool mapFramebuffer(uint8_t*& pixels, int& fd, int& size, int& bpp,
-                    int& stride, int& offset);
-void unmapFramebuffer(uint8_t* pixels, int fd, int size);
-
 /* Test pattern: four vertical stripes (white, red, green, blue) with lower
  * half with half-intensity */
 template <typename TYPE>

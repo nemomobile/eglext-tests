@@ -265,56 +265,6 @@ bool compareRGBA8888(uint32_t p1, uint32_t p2)
     return true;
 }
 
-bool mapFramebuffer(uint8_t*& pixels, int& fd, int& size, int& bpp,
-                    int& stride, int& offset)
-{
-    FILE* panInfo = fopen("/sys/class/graphics/fb0/pan", "r");
-    FILE* strideInfo = fopen("/sys/class/graphics/fb0/stride", "r");
-    FILE* sizeInfo = fopen("/sys/class/graphics/fb0/size", "r");
-    FILE* bppInfo = fopen("/sys/class/graphics/fb0/bits_per_pixel", "r");
-    int panX, panY;
-
-    if (fscanf(panInfo, "%d,%d", &panX, &panY) != 2 ||
-        fscanf(strideInfo, "%d", &stride) != 1 ||
-        fscanf(sizeInfo, "%d", &size) != 1 ||
-        fscanf(bppInfo, "%d", &bpp) != 1)
-    {
-        goto out;
-    }
-
-    fd = open("/dev/fb0", O_RDONLY);
-
-    if (fd == -1)
-    {
-        perror("open");
-        goto out;
-    }
-
-    pixels = reinterpret_cast<uint8_t*>
-        (mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0));
-    offset = panY * stride;
-
-    if (pixels == MAP_FAILED)
-    {
-        pixels = NULL;
-        close(fd);
-    }
-
-out:
-    fclose(panInfo);
-    fclose(strideInfo);
-    fclose(sizeInfo);
-    fclose(bppInfo);
-
-    return pixels != MAP_FAILED;
-}
-
-void unmapFramebuffer(uint8_t* pixels, int fd, int size)
-{
-    munmap(pixels, size);
-    close(fd);
-}
-
 void fail(const char* format, ...)
 {
     char msg[1024];
