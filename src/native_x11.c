@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -286,4 +287,49 @@ EGLBoolean nativeVerifyWindow(EGLNativeDisplayType nativeDisplay,
         return EGL_FALSE;
     }
     return EGL_TRUE;
+}
+
+EGLBoolean nativeMapFrontBuffer(EGLNativeDisplayType nativeDisplay,
+                                EGLNativeWindowType nativeWindow,
+                                int flags, uint8_t **pixels,
+                                int *width, int *height, int *bitsPerPixel,
+                                int *stride, NativeFrontBuffer *fb)
+{
+    Window root;
+    int x, y;
+    unsigned int border;
+    XImage* img;
+
+    XSync(nativeDisplay, 0);
+    XGetGeometry(nativeDisplay, nativeWindow, &root, &x, &y,
+                 (unsigned int*)width, (unsigned int*)height,
+                 &border, (unsigned int*)bitsPerPixel);
+
+    /* Only reading is currently supported */
+    assert(flags == NATIVE_FRONTBUFFER_READ_BIT);
+
+    img = XGetImage(nativeDisplay, nativeWindow, 0, 0, *width, *height, -1,
+                    ZPixmap);
+
+    if (!img)
+    {
+        return EGL_FALSE;
+    }
+
+    *fb = (void*)img;
+    *pixels = (uint8_t*)img->data;
+    *width = img->width;
+    *height = img->height;
+    *bitsPerPixel = img->bits_per_pixel;
+    *stride = img->bytes_per_line;
+
+    return EGL_TRUE;
+}
+
+void nativeUnmapFrontBuffer(EGLNativeDisplayType nativeDisplay,
+                            NativeFrontBuffer fb)
+{
+    (void)nativeDisplay;
+    XImage* img = (XImage*)fb;
+    XDestroyImage(img);
 }

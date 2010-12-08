@@ -101,6 +101,43 @@ EGLBoolean nativeCreatePixmap(EGLNativeDisplayType nativeDisplay,
  */
 void nativeDestroyPixmap(EGLNativeDisplayType nativeDisplay, EGLNativePixmapType nativePixmap);
 
+/** Opaque native front buffer handle */
+typedef void* NativeFrontBuffer;
+
+#define NATIVE_FRONTBUFFER_READ_BIT     0x0001  /** Read access to front buffer */
+#define NATIVE_FRONTBUFFER_WRITE_BIT    0x0002  /** Write access to front buffer */
+
+/**
+ *  Map the front buffer of a native window for CPU access
+ *
+ *  @param nativeDisplay                Native display handle
+ *  @param nativeWindow                 Native window owning the front buffer
+ *  @param flags                        Bitmask of requested access type (read,
+ *                                      write or both)
+ *  @param[out] pixels                  Pointer to pixel data
+ *  @param[out] width                   Front buffer width
+ *  @param[out] height                  Front buffer height
+ *  @param[out] bitsPerPixel            Front buffer depth
+ *  @param[out] stride                  Front buffer stride in bytes
+ *  @param[out] fb                      Front buffer handle
+ *
+ */
+EGLBoolean nativeMapFrontBuffer(EGLNativeDisplayType nativeDisplay,
+                                EGLNativeWindowType nativeWindow,
+                                int flags,
+                                uint8_t **pixels, int *width, int *height,
+                                int *bitsPerPixel, int *stride,
+                                NativeFrontBuffer *fb);
+
+/**
+ *  Unmap a previously mapped front buffer
+ *
+ *  @param nativeDisplay                Native display handle
+ *  @param fb                           Front buffer handle
+ */
+void nativeUnmapFrontBuffer(EGLNativeDisplayType nativeDisplay,
+                            NativeFrontBuffer fb);
+
 #if defined(__cplusplus)
 }
 #endif
