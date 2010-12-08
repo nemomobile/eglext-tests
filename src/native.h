@@ -27,11 +27,18 @@ extern "C" {
 
 /**
  *  Create a native display
+ *
+ *  @param[out] nativeDisplay           Native display handle
  */
 EGLBoolean nativeCreateDisplay(EGLNativeDisplayType *pNativeDisplay);
 
 /**
  *  Get properties of a display
+ *
+ *  @param nativeDisplay                Native display handle
+ *  @param[out] width                   Display width
+ *  @param[out] height                  Display height
+ *  @param[out] depth                   Display bits per pixel
  */
 EGLBoolean nativeGetDisplayProperties(EGLNativeDisplayType nativeDisplay, int *width,
                                       int *height, int *depth);
@@ -51,10 +58,10 @@ void nativeDestroyDisplay(EGLNativeDisplayType nativeDisplay);
  *  @param title                        Window title
  *  @param width                        Window width in pixels
  *  @param height                       Window height in pixels
- *  @param nativeWindow                 Output: new window handle
+ *  @param[out] nativeWindow            New window handle
  */
 EGLBoolean nativeCreateWindow(EGLNativeDisplayType nativeDisplay, EGLDisplay dpy,
-                              EGLConfig config, const char *title, int width, 
+                              EGLConfig config, const char *title, int width,
                               int height, EGLNativeWindowType *nativeWindow);
 
 /**
@@ -83,7 +90,7 @@ EGLBoolean nativeVerifyWindow(EGLNativeDisplayType nativeDisplay,
  *  @param depth                        Color depth
  *  @param width                        Pixmap width in pixels
  *  @param height                       Pixmap height in pixels
- *  @param nativPixmap                  Output: new pixmap handle
+ *  @param[out] nativePixmap            New pixmap handle
  */
 EGLBoolean nativeCreatePixmap(EGLNativeDisplayType nativeDisplay,
                               int depth,
