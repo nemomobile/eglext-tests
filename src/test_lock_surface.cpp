@@ -211,22 +211,24 @@ void checkSurface(EGLDisplay dpy, EGLSurface surface)
     }
 }
 
-void checkFramebuffer(int width, int height)
+void checkFrontBuffer(EGLNativeWindowType win)
 {
+    int width, height;
+    test::scoped<NativeFrontBuffer> fb(boost::bind(nativeUnmapFrontBuffer,
+                util::ctx.nativeDisplay, _1));
+    int fbStride, fbBits;
     uint8_t* fbPixels = 0;
-    int fbFd, fbSize, fbStride, fbOffset, fbBits;
 
     eglWaitClient();
     eglWaitNative(EGL_CORE_NATIVE_ENGINE);
 
-    if (!test::mapFramebuffer(fbPixels, fbFd, fbSize, fbBits, fbStride,
-                              fbOffset))
+    if (!nativeMapFrontBuffer(util::ctx.nativeDisplay, win,
+                              NATIVE_FRONTBUFFER_READ_BIT,
+                              &fbPixels, &width, &height, &fbBits,
+                              &fbStride, &fb))
     {
-        test::fail("Unable to map framebuffer");
+        test::fail("Unable to read front buffer");
     }
-
-    test::scoped<int> fb(
-            fbFd, boost::bind(test::unmapFramebuffer, fbPixels, _1, fbSize));
 
     for (int y = 0; y < height; y += height / 2 + 1)
     {
@@ -265,7 +267,7 @@ void checkFramebuffer(int width, int height)
             if (fbBits == 32)
             {
                 uint32_t color = *reinterpret_cast<uint32_t*>
-                    (&fbPixels[fbOffset + (height - y - 1) * fbStride + x * 4]);
+                    (&fbPixels[(height - y - 1) * fbStride + x * 4]);
                 b2 = ((color & 0x000000ff) >>  0);
                 g2 = ((color & 0x0000ff00) >>  8);
                 r2 = ((color & 0x00ff0000) >> 16);
@@ -274,7 +276,7 @@ void checkFramebuffer(int width, int height)
             {
                 assert(fbBits == 16);
                 uint16_t color = *reinterpret_cast<uint16_t*>
-                    (&fbPixels[fbOffset + (height - y - 1) * fbStride + x * 2]);
+                    (&fbPixels[(height - y - 1) * fbStride + x * 2]);
                 r2 = ((color & 0xf800) >> 11) << 3;
                 g2 = ((color & 0x07e0) >> 5) << 2;
                 b2 = (color & 0x001f) << 3;
@@ -379,7 +381,7 @@ void testWindowSurfaces()
             sleep(1);
 
             // Verify test pattern
-            checkFramebuffer(winWidth, winHeight);
+            checkFrontBuffer(win);
 
             eglDestroySurface(dpy, surface);
             nativeDestroyWindow(nativeDisplay, win);

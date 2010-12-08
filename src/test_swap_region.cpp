@@ -110,11 +110,13 @@ static void createFramebuffer(GLuint& texture, GLuint& framebuffer,
     ASSERT_GL();
 }
 
-static void compareFramebufferWithDisplay(GLuint framebuffer, int width, int height)
+static void compareFramebufferWithFrontBuffer(GLuint framebuffer, int width, int height)
 {
     boost::scoped_array<uint8_t> texPixels(new uint8_t[width * height * 2]);
+    test::scoped<NativeFrontBuffer> fb(boost::bind(nativeUnmapFrontBuffer,
+                util::ctx.nativeDisplay, _1));
+    int fbStride, fbBits;
     uint8_t* fbPixels = 0;
-    int fbFd, fbSize, fbStride, fbOffset, fbBits;
 
     eglWaitClient();
     eglWaitNative(EGL_CORE_NATIVE_ENGINE);
@@ -130,13 +132,13 @@ static void compareFramebufferWithDisplay(GLuint framebuffer, int width, int hei
     fclose(f);
 #endif
 
-    if (!test::mapFramebuffer(fbPixels, fbFd, fbSize, fbBits, fbStride, fbOffset))
+    if (!nativeMapFrontBuffer(util::ctx.nativeDisplay, util::ctx.win,
+                              NATIVE_FRONTBUFFER_READ_BIT,
+                              &fbPixels, &width, &height, &fbBits,
+                              &fbStride, &fb))
     {
-        test::fail("Unable to map framebuffer");
+        test::fail("Unable to read front buffer");
     }
-
-    test::scoped<int> fb(
-            fbFd, boost::bind(test::unmapFramebuffer, fbPixels, _1, fbSize));
 
     for (int y = 0; y < height; y++)
     {
@@ -150,13 +152,13 @@ static void compareFramebufferWithDisplay(GLuint framebuffer, int width, int hei
             if (fbBits == 16)
             {
                 p2 = *reinterpret_cast<uint16_t*>
-                    (&fbPixels[fbOffset + (height - y - 1) * fbStride + x * 2]);
+                    (&fbPixels[(height - y - 1) * fbStride + x * 2]);
             }
             else
             {
                 ASSERT(fbBits == 32);
                 uint32_t color = *reinterpret_cast<uint32_t*>
-                    (&fbPixels[fbOffset + (height - y - 1) * fbStride + x * 4]);
+                    (&fbPixels[(height - y - 1) * fbStride + x * 4]);
                 uint8_t b = ((color & 0x000000ff) >>  0);
                 uint8_t g = ((color & 0x0000ff00) >>  8);
                 uint8_t r = ((color & 0x00ff0000) >> 16);
@@ -319,7 +321,7 @@ void testPartialUpdates(int maxRects = 0)
     }
 
     // Check the results
-    compareFramebufferWithDisplay(framebuffer, surfaceWidth, surfaceHeight);
+    compareFramebufferWithFrontBuffer(framebuffer, surfaceWidth, surfaceHeight);
 
     glDeleteTextures(1, &texture);
     glDeleteFramebuffers(1, &framebuffer);
@@ -436,7 +438,7 @@ void testSynchronization()
     ASSERT_GL();
 
     // Check the results
-    compareFramebufferWithDisplay(framebuffer, surfaceWidth, surfaceHeight);
+    compareFramebufferWithFrontBuffer(framebuffer, surfaceWidth, surfaceHeight);
 
     glDeleteTextures(1, &texture);
     glDeleteFramebuffers(1, &framebuffer);
@@ -502,7 +504,7 @@ void testSingleUpdate()
     ASSERT_GL();
 
     // Check the results
-    compareFramebufferWithDisplay(framebuffer, surfaceWidth, surfaceHeight);
+    compareFramebufferWithFrontBuffer(framebuffer, surfaceWidth, surfaceHeight);
 
     glDeleteTextures(1, &texture);
     glDeleteFramebuffers(1, &framebuffer);
