@@ -72,7 +72,7 @@ bool loadRawTexture(GLenum target, int level, GLenum internalFormat, int width,
         return false;
     }
 
-    void* pixels = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    void* pixels = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
     glTexImage2D(target, level, internalFormat, width, height, 0, format, type, pixels);
 
     munmap(pixels, sb.st_size);
@@ -105,7 +105,7 @@ bool loadCompressedTexture(GLenum target, int level, GLenum internalFormat, int 
         return false;
     }
 
-    void* pixels = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    void* pixels = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
     glCompressedTexImage2D(target, level, internalFormat, width, height, 0, sb.st_size, pixels);
 
     munmap(pixels, sb.st_size);
