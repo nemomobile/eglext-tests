@@ -1,3 +1,10 @@
+eglext-tests (0.4) unstable; urgency=low
+
+  * egl-ext: Read test results from front buffer instead of frame buffer
+  * egl-ext: Use MAP_SHARED instead of MAP_PRIVATE
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Thu, 09 Dec 2010 17:36:59 +0200
+
 eglext-tests (0.3) unstable; urgency=low
 
   * egl-ext: Fix X11 window atom handling
