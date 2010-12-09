@@ -347,6 +347,51 @@ void testSyncQueue(bool inOrder, bool acrossFrames)
     }
 }
 
+/**
+ *  Measure various delays when using sync objects
+ */
+void testLatency()
+{
+    int cycles = 64;
+    int64_t start, totalRendering = 0, totalCreate = 0,
+            totalWait = 0, totalDestroy = 0;
+
+    glClearColor(.8, .1, .6, 1.0);
+
+    for (int i = 0; i < cycles; i++)
+    {
+        /* Render */
+        start = util::getTime();
+        glClear(GL_COLOR_BUFFER_BIT);
+        totalRendering += util::getTime() - start;
+
+        /* Place fence */
+        start = util::getTime();
+        EGLSyncKHR sync = eglCreateSyncKHR(util::ctx.dpy, EGL_SYNC_FENCE_KHR, NULL);
+        totalCreate += util::getTime() - start;
+
+        /* Wait for fence */
+        start = util::getTime();
+        eglClientWaitSyncKHR(util::ctx.dpy, sync,
+                             EGL_SYNC_FLUSH_COMMANDS_BIT_KHR, 1000ull * 1000 * 1000);
+        totalWait += util::getTime() - start;
+
+        /* Destroy */
+        start = util::getTime();
+        eglDestroySyncKHR(util::ctx.dpy, sync);
+        totalDestroy += util::getTime() - start;
+
+        /* Reset */
+        test::swapBuffers();
+    }
+
+    printf("%lld us / %lld us / %lld us / %lld us : ",
+            totalRendering / cycles / 1000UL,
+            totalCreate / cycles / 1000UL,
+            totalWait / cycles / 1000UL,
+            totalDestroy / cycles / 1000UL);
+}
+
 int main(int argc, char** argv)
 {
     bool result;
@@ -403,6 +448,8 @@ int main(int argc, char** argv)
     result &= test::verifyResult(boost::bind(testSyncQueue, false, false));
     test::printHeader("Testing sync queue out-of-order w/swaps");
     result &= test::verifyResult(boost::bind(testSyncQueue, false, true));
+    test::printHeader("Testing sync latency");
+    result &= test::verifyResult(testLatency);
 
 out:
     glDeleteProgram(program);
