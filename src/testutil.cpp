@@ -119,7 +119,7 @@ const char *fragSource =
     "   gl_FragColor = color;\n"
     "}\n";
 
-void drawQuad(int x, int y, int w, int h, int c)
+void drawQuad(int x, int y, int w, int h, GLfloat r, GLfloat g, GLfloat b)
 {
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -129,15 +129,12 @@ void drawQuad(int x, int y, int w, int h, int c)
     const GLfloat viewH = 0.5f * viewport[3];
     const GLfloat quadX1 = x       / viewW - 1.0f, quadY1 = y       / viewH - 1.0f;
     const GLfloat quadX2 = (x + w) / viewW - 1.0f, quadY2 = (y + h) / viewH - 1.0f;
-    const GLfloat red = (c >> 11) & 0x1f;
-    const GLfloat green = (c >> 5) & 0x3f;
-    const GLfloat blue = (c >> 0) & 0x1f;
     const GLfloat color[] =
     {
-        0,   red,   green,   blue,
-        0,   red,   green,   blue,
-        0,   red,   green,   blue,
-        0,   red,   green,   blue,
+        r, g, b, 1.0f,
+        r, g, b, 1.0f,
+        r, g, b, 1.0f,
+        r, g, b, 1.0f,
     };
 
     const GLfloat vertices[] =

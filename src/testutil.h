@@ -50,7 +50,7 @@ extern const char *fragSource;
 namespace color {
     extern const char *vertSource;
     extern const char *fragSource;
-    void drawQuad(int x, int y, int w, int h, int color);
+    void drawQuad(int x, int y, int w, int h, GLfloat r, GLfloat g, GLfloat b);
 }
 
 void fail(const char* format, ...);
