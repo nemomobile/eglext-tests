@@ -119,6 +119,31 @@ typedef EGLBoolean (EGLAPIENTRYP PFNEGLSIGNALSYNCKHRPROC) (EGLDisplay dpy, EGLSy
 typedef EGLBoolean (EGLAPIENTRYP PFNEGLGETSYNCATTRIBKHRPROC) (EGLDisplay dpy, EGLSyncKHR sync, EGLint attribute, EGLint *value);
 #endif
 
+#ifndef EGL_NOK_surface_scaling
+#define EGL_NOK_surface_scaling 1
+#define EGL_SURFACE_SCALING_NOK         0x30DD
+
+#define EGL_FIXED_WIDTH_NOK	            0x30DB
+#define EGL_FIXED_HEIGHT_NOK            0x30DC
+#define EGL_TARGET_EXTENT_OFFSET_X_NOK  0x3079
+#define EGL_TARGET_EXTENT_OFFSET_Y_NOK  0x307A
+#define EGL_TARGET_EXTENT_WIDTH_NOK     0x307B
+#define EGL_TARGET_EXTENT_HEIGHT_NOK    0x307C
+#define EGL_BORDER_COLOR_RED_NOK        0x307D
+#define EGL_BORDER_COLOR_GREEN_NOK      0x307E
+#define EGL_BORDER_COLOR_BLUE_NOK       0x30D8
+
+#define EGL_NOT_SUPPORTED_NOK           0
+#define EGL_SUPPORTED_NOK               1
+#define EGL_SLOW_NOK                    3
+
+typedef EGLBoolean (EGLAPIENTRYP PFNEGLQUERYSURFACESCALINGCAPABILITYNOKPROC) (EGLDisplay display, EGLConfig config,
+                    EGLint surface_width, EGLint surface_height, EGLint target_width, EGLint target_height, EGLint *value);
+
+typedef EGLBoolean (EGLAPIENTRYP PFNEGLSETSURFACESCALINGNOKPROC) (EGLDisplay display, EGLSurface surface,
+                    EGLint target_offset_x, EGLint target_offset_y, EGLint target_width, EGLint target_height);
+#endif
+
 #ifndef EGL_KHR_fence_sync
 #define EGL_KHR_fence_sync 1
 #define EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR    0x30F0

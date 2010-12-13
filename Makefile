@@ -8,6 +8,7 @@ all: src/test_image \
     src/test_shared_image \
     src/test_swap_region \
     src/test_lock_surface \
+    src/test_scaling \
     src/test_fence_sync
 
 src/test_image: $(OBJS)
@@ -18,6 +19,8 @@ src/test_swap_region: $(OBJS)
 
 src/test_lock_surface: $(OBJS)
 
+src/test_scaling: $(OBJS)
+
 src/test_fence_sync: $(OBJS)
 
 install: all
@@ -27,6 +30,7 @@ install: all
 	    src/test_shared_image \
 	    src/test_swap_region \
 	    src/test_lock_surface \
+	    src/test_scaling \
 	    src/test_fence_sync \
 	    $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/usr/share/eglext-tests
@@ -38,4 +42,5 @@ clean:
 	    src/test_shared_image \
 	    src/test_swap_region \
 	    src/test_lock_surface \
+	    src/test_scaling \
 	    src/test_fence_sync
