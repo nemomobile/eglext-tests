@@ -1,3 +1,9 @@
+eglext-tests (0.5) unstable; urgency=low
+
+  * egl-ext: Added sync object latency measurement
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Thu, 16 Dec 2010 11:31:32 +0200
+
 eglext-tests (0.4) unstable; urgency=low
 
   * egl-ext: Read test results from front buffer instead of frame buffer
