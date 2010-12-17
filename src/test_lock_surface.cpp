@@ -274,7 +274,7 @@ void checkFrontBuffer(EGLNativeWindowType win)
             }
             else
             {
-                assert(fbBits == 16);
+                ASSERT(fbBits == 16);
                 uint16_t color = *reinterpret_cast<uint16_t*>
                     (&fbPixels[(height - y - 1) * fbStride + x * 2]);
                 r2 = ((color & 0xf800) >> 11) << 3;
@@ -556,7 +556,7 @@ int main(int argc, char** argv)
     eglInitialize(dpy, NULL, NULL);
 
     result = util::createWindow(winWidth, winHeight, configAttrs, contextAttrs);
-    assert(result);
+    ASSERT(result);
     ASSERT_EGL();
 
     GLint program = util::createProgram(test::vertSource, test::fragSource);

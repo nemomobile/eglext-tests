@@ -132,7 +132,7 @@ GLint createProgram(const std::string& vertSrc, const std::string& fragSrc)
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), &logLength, infoLog);
         printf("Vertex shader compilation failed:\n%s\n", infoLog);
     }
-    assert(success);
+    ASSERT(success);
 
     GLint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fs, 0);
@@ -143,7 +143,7 @@ GLint createProgram(const std::string& vertSrc, const std::string& fragSrc)
         glGetShaderInfoLog(fragmentShader, sizeof(infoLog), &logLength, infoLog);
         printf("Fragment shader compilation failed:\n%s\n", infoLog);
     }
-    assert(success);
+    ASSERT(success);
 
     GLint program = glCreateProgram();
     glAttachShader(program, fragmentShader);
@@ -155,7 +155,7 @@ GLint createProgram(const std::string& vertSrc, const std::string& fragSrc)
         glGetProgramInfoLog(program, sizeof(infoLog), &logLength, infoLog);
         printf("Program linking failed:\n%s\n", infoLog);
     }
-    assert(success);
+    ASSERT(success);
     return program;
 } 
 

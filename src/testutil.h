@@ -71,10 +71,10 @@ void drawTestPattern(TYPE* pixels, int width, int height, int pitch,
         int redShift, int greenShift, int blueShift, int alphaShift,
         bool originAtTop)
 {
-    assert(redSize <= 8);
-    assert(greenSize <= 8);
-    assert(blueSize <= 8);
-    assert(alphaSize <= 8);
+    ASSERT(redSize <= 8);
+    ASSERT(greenSize <= 8);
+    ASSERT(blueSize <= 8);
+    ASSERT(alphaSize <= 8);
 
     pitch /= sizeof(TYPE);
 
