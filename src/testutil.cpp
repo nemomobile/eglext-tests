@@ -274,4 +274,21 @@ void fail(const char* format, ...)
     throw std::runtime_error(msg);
 }
 
+void assert(bool condition, const char* format, ...)
+{
+    if (condition)
+    {
+        return;
+    }
+
+    char msg[1024];
+    va_list ap;
+
+    va_start(ap, format);
+    vsnprintf(msg, sizeof(msg), format, ap);
+    va_end(ap);
+
+    throw std::runtime_error(msg);
+}
+
 } // namespace test

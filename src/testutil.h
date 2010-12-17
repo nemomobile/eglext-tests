@@ -23,7 +23,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <assert.h>
 
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -53,6 +52,11 @@ namespace color {
     void drawQuad(int x, int y, int w, int h, GLfloat r, GLfloat g, GLfloat b);
 }
 
+#if defined(assert)
+#    undef assert
+#endif
+
+void assert(bool condition, const char* format, ...);
 void fail(const char* format, ...);
 bool printResult(bool result);
 bool printResult(const std::runtime_error& error);
