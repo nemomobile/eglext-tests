@@ -67,12 +67,6 @@ typedef EGLBoolean (EGLAPIENTRYP PFNEGLUNLOCKSURFACEKHRPROC) (EGLDisplay display
 #define EGL_YUV_CONVERSION_BT709_FULL_NOK       0x3153
 #endif
 
-#ifndef GL_OES_image_external
-#define GL_OES_image_external 1
-/* TODO: Use the ratified token values */
-#define GL_TEXTURE_EXTERNAL_OES                 0x8060
-#endif
-
 #ifndef EGL_NOK_image_shared
 #define EGL_NOK_image_shared 1
 typedef XID EGLNativeSharedImageTypeNOK;
