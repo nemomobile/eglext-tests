@@ -357,9 +357,9 @@ void testFramebuffers(int width, int height, int depth)
                 case 32:
                 {
                     uint32_t p = ((uint32_t*)data)[x];
-                    b2 = (p & 0x000000ff);
+                    r2 = (p & 0x000000ff);
                     g2 = (p & 0x0000ff00) >> 8;
-                    r2 = (p & 0x00ff0000) >> 16;
+                    b2 = (p & 0x00ff0000) >> 16;
                     a2 = (p & 0xff000000) >> 24;
                     break;
                 }
