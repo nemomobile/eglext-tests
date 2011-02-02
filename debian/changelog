@@ -1,3 +1,9 @@
+eglext-tests (0.7) unstable; urgency=low
+
+  * egl-ext: Fix channel ordering in FBO test
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Wed, 02 Feb 2011 15:11:26 +0200
+
 eglext-tests (0.6) unstable; urgency=low
 
   * egl-ext: Added test for EGL_NOK_surface_scaling
