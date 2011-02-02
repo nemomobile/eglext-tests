@@ -36,6 +36,7 @@
 
 EGLBoolean nativeCreateDisplay(EGLNativeDisplayType *pNativeDisplay)
 {
+    XInitThreads();
     *pNativeDisplay = XOpenDisplay(NULL);
 
     if (!*pNativeDisplay)
