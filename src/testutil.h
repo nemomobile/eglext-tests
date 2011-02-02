@@ -158,11 +158,6 @@ public:
     {
     }
 
-    scoped():
-        m_value(0)
-    {
-    }
-
     virtual ~scoped()
     {
         if (this->m_value && m_deleter)
