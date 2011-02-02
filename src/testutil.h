@@ -182,6 +182,19 @@ public:
         return &m_value;
     }
 
+    scoped<TYPE>& operator=(scoped<TYPE>& v)
+    {
+        if (this->m_value && m_deleter)
+        {
+            m_deleter(this->m_value);
+        }
+        m_value = 0;
+        m_deleter = 0;
+        std::swap(m_value, v.m_value);
+        std::swap(m_deleter, v.m_deleter);
+        return *this;
+    }
+
 protected:
     TYPE m_value;
 private:
