@@ -493,6 +493,279 @@ void testMappingLatency(int width, int height)
     glDeleteTextures(1, &targetTexture);
 }
 
+struct SyncTestContext
+{
+    test::scoped<Pixmap> pixmap;
+    pthread_mutex_t lock;
+    pthread_cond_t message;
+    int width, height;
+    bool done;
+    bool needContent;
+};
+
+/**
+ *  Worker thread for the implicit synchronization test
+ */
+void* contentProducerThread(void* data)
+{
+    SyncTestContext* ctx = reinterpret_cast<SyncTestContext*>(data);
+    EGLConfig config;
+    EGLContext context;
+    EGLSurface dummySurface;
+    EGLint configCount;
+
+    const EGLint configAttrs[] =
+    {
+        EGL_BUFFER_SIZE,     32,
+        EGL_SURFACE_TYPE,    EGL_PIXMAP_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_NONE
+    };
+
+    const EGLint contextAttrs[] =
+    {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
+
+    /* Create a dummy offscreen rendering surface */
+    test::scoped<Pixmap> dummyPixmap(
+            boost::bind(nativeDestroyPixmap, util::ctx.nativeDisplay, _1));
+
+    ASSERT(nativeCreatePixmap(
+            util::ctx.nativeDisplay, 32, 64, 64, &dummyPixmap));
+
+    eglChooseConfig(util::ctx.dpy, configAttrs, &config, 1, &configCount);
+    ASSERT_EGL();
+    ASSERT(configCount == 1);
+
+    context = eglCreateContext(util::ctx.dpy, config, EGL_NO_CONTEXT,
+                               contextAttrs);
+    ASSERT_EGL();
+
+    dummySurface = eglCreatePixmapSurface(util::ctx.dpy, config,
+                                          dummyPixmap, NULL);
+    ASSERT_EGL();
+
+    eglMakeCurrent(util::ctx.dpy, dummySurface, dummySurface, context);
+    ASSERT_EGL();
+
+    /* Create an EGLImage from the shared pixmap */
+    EGLImageKHR image;
+    image = eglCreateImageKHR(util::ctx.dpy, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR,
+                              (EGLClientBuffer)(intptr_t)ctx->pixmap, NULL);
+    ASSERT_EGL();
+
+    /* Bind the image to a renderbuffer */
+    GLuint renderbuffer;
+    glGenRenderbuffers(1, &renderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+    glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, image);
+    ASSERT_GL();
+
+    /* Bind the renderbuffer to a framebuffer */
+    GLuint framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                              GL_RENDERBUFFER, renderbuffer);
+    ASSERT_GL();
+
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    ASSERT(status == GL_FRAMEBUFFER_COMPLETE);
+
+    /* Prepare blitter program */
+    GLint program = util::createProgram(test::color::vertSource,
+                                        test::color::fragSource);
+    glUseProgram(program);
+    glViewport(0, 0, ctx->width, ctx->height);
+
+    int frame = 0;
+    while (1)
+    {
+        /* Wait for a content request */
+        pthread_mutex_lock(&ctx->lock);
+        while (!ctx->needContent && !ctx->done)
+        {
+            pthread_cond_wait(&ctx->message, &ctx->lock);
+        }
+        pthread_mutex_unlock(&ctx->lock);
+
+        if (ctx->done)
+        {
+            break;
+        }
+
+        /* Clear the pixmap with red (i.e., invalid color) */
+        GLubyte color[4];
+        glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, color);
+        ASSERT_GL();
+
+        /* Fill the pixmap with non-red semi-complex rendering */
+        int tileSize = 16;
+        for (int y = 0; y < ctx->height + tileSize; y += tileSize)
+        {
+            for (int x = 0; x < ctx->width + tileSize; x += tileSize)
+            {
+                bool green = frame & 0x1;
+                bool blue  = frame & 0x2;
+                test::color::drawQuad(x, y, tileSize, tileSize,
+                        0.0f,
+                        green ? float(y) / ctx->height : 0.0f,
+                        blue  ? float(x) / ctx->width  : 0.0f);
+            }
+        }
+
+        /* Flush and signal the main thread */
+        glFlush();
+        ctx->needContent = false;
+        pthread_cond_signal(&ctx->message);
+        frame++;
+    }
+
+    glDeleteRenderbuffers(1, &renderbuffer);
+    glDeleteFramebuffers(1, &framebuffer);
+
+    eglDestroyImageKHR(util::ctx.dpy, image);
+    eglDestroyContext(util::ctx.dpy, context);
+    eglDestroySurface(util::ctx.dpy, dummySurface);
+    ASSERT_EGL();
+
+    return NULL;
+}
+
+/**
+ *  Test implicit render synchronization with pixmap-backed EGLImages.
+ *
+ *  Initialization:
+ *
+ *  1. Create a pixmap.
+ *  2. Create an EGLImage from the pixmap.
+ *  3. Spawn a thread and create render context on the pixmap by binding it to
+ *     an FBO using an EGLImage.
+ *
+ *  Test loop:
+ *
+ *  1. In the thread, render a solid red color into the pixmap and do a read
+ *     back to force rendering to complete.
+ *  2. Still in the thread, render semi-complex geometry into the pixmap using
+ *     other colors than red.
+ *  3. Call glFlush() and send a signal to the main thread.
+ *  4. In the main thread, bind the EGLImage into a texture and render it into
+ *     the window surface.
+ *  5. Check that no red pixels are visible in the window surface output.
+ */
+void testImplicitSync(int width, int height)
+{
+    boost::scoped_array<uint32_t> pixels(new uint32_t[width * height]);
+
+    SyncTestContext ctx;
+    ctx.pixmap = test::scoped<Pixmap>(
+            boost::bind(nativeDestroyPixmap, util::ctx.nativeDisplay, _1));
+    ctx.width = width;
+    ctx.height = height;
+    ctx.done = false;
+    ctx.needContent = false;
+
+    ASSERT(nativeCreatePixmap(
+            util::ctx.nativeDisplay, 32, ctx.width, ctx.height, &ctx.pixmap));
+
+    /* Create an EGLImage from the shared pixmap */
+    EGLImageKHR image;
+    image = eglCreateImageKHR(util::ctx.dpy, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR,
+                              (EGLClientBuffer)(intptr_t)ctx.pixmap, NULL);
+    ASSERT_EGL();
+
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    ASSERT_GL();
+
+    /* Start the producer */
+    pthread_mutex_init(&ctx.lock, NULL);
+    pthread_cond_init(&ctx.message, NULL);
+    pthread_t thread;
+    pthread_create(&thread, NULL, contentProducerThread, &ctx);
+
+    for (int frame = 0; frame < 32; frame++)
+    {
+        /* Request content from the producer */
+        ctx.needContent = true;
+        pthread_cond_signal(&ctx.message);
+
+        /* Wait for content */
+        pthread_mutex_lock(&ctx.lock);
+        while (ctx.needContent)
+        {
+            pthread_cond_wait(&ctx.message, &ctx.lock);
+        }
+        pthread_mutex_unlock(&ctx.lock);
+
+        /* Bind the image to a texture */
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+
+        /* Render the texture to the screen */
+        glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        test::drawQuad(0, 0, width, height);
+
+        /* Check the results */
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+                     &pixels[0]);
+        ASSERT_GL();
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                /* Colors alternate as black, green, blue, green + blue */
+                uint8_t r1 = 0;
+                uint8_t g1 = (frame & 0x1) ? 0xff : 0;
+                uint8_t b1 = (frame & 0x2) ? 0xff : 0;
+                uint8_t a1 = 0xff;
+
+                uint32_t p = pixels[y * width + x];
+                uint8_t r2 = (p & 0x000000ff);
+                uint8_t g2 = (p & 0x0000ff00) >> 8;
+                uint8_t b2 = (p & 0x00ff0000) >> 16;
+                uint8_t a2 = (p & 0xff000000) >> 24;
+                int t = 8;
+
+                /* Make sure no invalid colors are present */
+                if (r2 > r1 + t ||
+                    g2 > g1 + t ||
+                    b2 > b1 + t ||
+                    a2 > a1 + t)
+                {
+                    ctx.done = true;
+                    pthread_cond_signal(&ctx.message);
+                    pthread_join(thread, NULL);
+                    test::fail("Image comparison failed at (%d, %d), size (%d, %d), expected %02x%02x%02x%02x, "
+                               "got %02x%02x%02x%02x\n", x, y, width, height, r1, g1, b1, a1,
+                               r2, g2, b2, a2);
+                }
+            }
+        }
+        test::swapBuffers();
+    }
+
+    ctx.done = true;
+    pthread_cond_signal(&ctx.message);
+    pthread_join(thread, NULL);
+
+    pthread_cond_destroy(&ctx.message);
+    pthread_mutex_destroy(&ctx.lock);
+}
+
 int main(int argc, char** argv)
 {
     bool result;
@@ -583,6 +856,9 @@ int main(int argc, char** argv)
             test::swapBuffers();
         }
     }
+
+    test::printHeader("Testing implicit synchronization");
+    result &= test::verifyResult(boost::bind(testImplicitSync, winWidth, winHeight));
 
     for (unsigned int i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
     {
