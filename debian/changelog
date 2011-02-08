@@ -1,3 +1,9 @@
+eglext-tests (0.8) unstable; urgency=low
+
+  * egl-ext: Add implicit synchronization test
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Tue, 08 Feb 2011 11:08:44 +0200
+
 eglext-tests (0.7) unstable; urgency=low
 
   * egl-ext: Fix channel ordering in FBO test
