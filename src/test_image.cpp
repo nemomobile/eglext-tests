@@ -179,6 +179,41 @@ static void fillPixmap(Pixmap pixmap, int width, int height, int depth)
     eglWaitNative(EGL_CORE_NATIVE_ENGINE);
 }
 
+void verifyTextureRendering(int width, int height, uint32_t *pixels)
+{
+    /* Check the results */
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    ASSERT_GL();
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            uint32_t p1 = colorAt(width, height, x, height - y - 1);
+            uint32_t p2 = pixels[y * width + x];
+            uint8_t b1 = (p1 & 0x000000ff);
+            uint8_t g1 = (p1 & 0x0000ff00) >> 8;
+            uint8_t r1 = (p1 & 0x00ff0000) >> 16;
+            uint8_t a1 = (p1 & 0xff000000) >> 24;
+            uint8_t r2 = (p2 & 0x000000ff);
+            uint8_t g2 = (p2 & 0x0000ff00) >> 8;
+            uint8_t b2 = (p2 & 0x00ff0000) >> 16;
+            uint8_t a2 = (p2 & 0xff000000) >> 24;
+            int t = 8;
+
+            if (abs(r1 - r2) > t ||
+                abs(g1 - g2) > t ||
+                abs(b1 - b2) > t ||
+                abs(a1 - a2) > t)
+            {
+                test::fail("Image comparison failed at (%d, %d), size (%d, %d), expected %02x%02x%02x%02x, "
+                           "got %02x%02x%02x%02x\n", x, y, width, height, r1, g1, b1, a1,
+                           r2, g2, b2, a2);
+            }
+        }
+    }
+}
+
 /**
  *  Test pixmap usage as texture via EGLImage.
  *
@@ -222,37 +257,7 @@ void testTextures(int width, int height, int depth)
 
     test::drawQuad(0, 0, width, height);
 
-    /* Check the results */
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, &pixels[0]);
-    ASSERT_GL();
-
-    for (int y = 0; y < height; y++)
-    {
-        for (int x = 0; x < width; x++)
-        {
-            uint32_t p1 = colorAt(width, height, x, height - y - 1);
-            uint32_t p2 = pixels[y * width + x];
-            uint8_t b1 = (p1 & 0x000000ff);
-            uint8_t g1 = (p1 & 0x0000ff00) >> 8;
-            uint8_t r1 = (p1 & 0x00ff0000) >> 16;
-            uint8_t a1 = (p1 & 0xff000000) >> 24;
-            uint8_t r2 = (p2 & 0x000000ff);
-            uint8_t g2 = (p2 & 0x0000ff00) >> 8;
-            uint8_t b2 = (p2 & 0x00ff0000) >> 16;
-            uint8_t a2 = (p2 & 0xff000000) >> 24;
-            int t = 8;
-
-            if (abs(r1 - r2) > t ||
-                abs(g1 - g2) > t ||
-                abs(b1 - b2) > t ||
-                abs(a1 - a2) > t)
-            {
-                test::fail("Image comparison failed at (%d, %d), size (%d, %d), expected %02x%02x%02x%02x, "
-                           "got %02x%02x%02x%02x\n", x, y, width, height, r1, g1, b1, a1,
-                           r2, g2, b2, a2);
-            }
-        }
-    }
+    verifyTextureRendering(width, height, &pixels[0]);
 
     /* Clean up */
     glDeleteTextures(1, &texture);
@@ -403,6 +408,102 @@ void testFramebuffers(int width, int height, int depth)
     glDeleteRenderbuffers(1, &framebuffer);
     glDeleteTextures(1, &texture);
     eglDestroyImageKHR(util::ctx.dpy, image);
+}
+
+/**
+ *  Test pixmap usage as texture via EGLImage after destruction.
+ *
+ *  1. Create @width x @height x @depth pixmap.
+ *  2. Fill pixmap with test pattern.
+ *  3. Create EGLimage referring to pixmap with EGL_NATIVE_PIXMAP_KHR.
+ *  4. Bind EGLImage to texture with glEGLImageTargetTexture2DOES.
+ *  5. Draw quad using the texture.
+ *  6. Verify that destination surface contains the test pattern.
+ *  7. Destroy pixmap
+ *  8. Create and clear 2 new pixmaps
+ *  9. Draw quad using the texture.
+ * 10. Verify that destination surface contains the test pattern.
+ */
+void testUseAfterDestroy(int width, int height, int depth)
+{
+    Pixmap pixmaps[2];
+    boost::scoped_array<uint32_t> pixels(new uint32_t[width * height]);
+    EGLImageKHR image;
+    GLuint texture[2];
+    size_t i;
+
+    const EGLint imageAttributes[] =
+    {
+        EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
+        EGL_NONE
+    };
+
+
+    {
+        test::scoped<Pixmap> pixmap(
+                boost::bind(nativeDestroyPixmap, util::ctx.nativeDisplay, _1));
+
+        /* Create and fill the pixmap with the test pattern */
+        ASSERT(nativeCreatePixmap(util::ctx.nativeDisplay, depth, width, height, &pixmap));
+        fillPixmap(pixmap, width, height, depth);
+
+        /* Create an EGL image from the pixmap */
+        image = eglCreateImageKHR(util::ctx.dpy, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR,
+                (EGLClientBuffer)(intptr_t)pixmap, imageAttributes);
+        ASSERT_EGL();
+
+        /* Bind the image to a texture */
+        glGenTextures(2, texture);
+        glBindTexture(GL_TEXTURE_2D, texture[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+        ASSERT_GL();
+
+        test::drawQuad(0, 0, width, height);
+
+        verifyTextureRendering(width, height, &pixels[0]);
+
+        eglDestroyImageKHR(util::ctx.dpy, image);
+    }
+
+    test::swapBuffers();
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    XGCValues gcValues;
+
+    gcValues.foreground = 0;
+
+    for (i = 0; i < sizeof(pixmaps)/sizeof(pixmaps[0]); i++) {
+        ASSERT(nativeCreatePixmap(util::ctx.nativeDisplay, depth, width, height, &pixmaps[i]));
+
+        image = eglCreateImageKHR(util::ctx.dpy, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR,
+                (EGLClientBuffer)(intptr_t)pixmaps[i], imageAttributes);
+        ASSERT_EGL();
+
+	glBindTexture(GL_TEXTURE_2D, texture[1]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+        ASSERT_GL();
+
+	GC gc = XCreateGC(util::ctx.nativeDisplay, pixmaps[i], GCForeground, &gcValues);
+        XFillRectangle(util::ctx.nativeDisplay, pixmaps[i], gc, 0, 0, width, height);
+        XFreeGC(util::ctx.nativeDisplay, gc);
+        eglDestroyImageKHR(util::ctx.dpy, image);
+    }
+
+    for (i = 0; i < sizeof(pixmaps)/sizeof(pixmaps[0]); i++)
+        nativeDestroyPixmap(util::ctx.nativeDisplay, pixmaps[i]);
+
+    eglWaitNative(EGL_CORE_NATIVE_ENGINE);
+
+    glBindTexture(GL_TEXTURE_2D, texture[0]);
+    test::drawQuad(0, 0, width, height);
+    verifyTextureRendering(width, height, &pixels[0]);
+
+    /* Clean up */
+    glDeleteTextures(2, texture);
 }
 
 /**
@@ -828,7 +929,6 @@ int main(int argc, char** argv)
     {
         goto out;
     }
-
     test::printHeader("Testing failure cases");
     result &= test::verifyResult(testFailureCases);
 
@@ -868,6 +968,15 @@ int main(int argc, char** argv)
         result &= test::verifyResult(
                 boost::bind(testMappingLatency, sizes[i], sizes[i]));
     }
+
+    colorPattern = 0;
+
+    test::printHeader("Test EGLImage life time after pixmap destruction");
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    result &= test::verifyResult(
+            boost::bind(testUseAfterDestroy, 854, 480, 16));
+    test::swapBuffers();
 
 out:
     glDeleteProgram(program);
