@@ -972,7 +972,7 @@ int main(int argc, char** argv)
 
     colorPattern = 0;
 
-    test::printHeader("Test EGLImage life time after pixmap destruction");
+    test::printHeader("Testing image usage after pixmap destruction");
 
     glClear(GL_COLOR_BUFFER_BIT);
     result &= test::verifyResult(
