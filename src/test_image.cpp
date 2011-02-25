@@ -419,8 +419,9 @@ void testFramebuffers(int width, int height, int depth)
  *  4. Bind EGLImage to texture with glEGLImageTargetTexture2DOES.
  *  5. Draw quad using the texture.
  *  6. Verify that destination surface contains the test pattern.
- *  7. Destroy pixmap
- *  8. Create and clear 2 new pixmaps
+ *  7. Destroy pixmap.
+ *  8. Create and clear 2 new pixmaps to ensure new pixmap allocations do not
+ *     reuse the memory which is still bound to the EGLImage.
  *  9. Draw quad using the texture.
  * 10. Verify that destination surface contains the test pattern.
  */
