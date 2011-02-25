@@ -1,3 +1,10 @@
+eglext-tests (0.9) unstable; urgency=low
+
+  * egl-ext: Add test to check that EGLImage can be accessed after pixmap
+    destruction
+
+ -- Sami Kyöstilä <sami.kyostila@nokia.com>  Fri, 25 Feb 2011 17:09:00 +0200
+
 eglext-tests (0.8) unstable; urgency=low
 
   * egl-ext: Add implicit synchronization test
